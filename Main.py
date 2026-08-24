@@ -1,37 +1,30 @@
+import discord
+from discord.ext import commands
 import os
 from flask import Flask
-from threading import Thread
-from telegram import Update
-from telegram.ext import Application, ContextTypes, MessageReactionHandler, MessageHandler, filters
+import threading
 
-TOKEN = os.getenv("BOT_TOKEN")
-web_app = Flask(__name__)
+app = Flask(__name__)
 
-@web_app.route('/')
+@app.route('/')
 def home():
-    return "Life-bot online!"
+    return "Bot online!"
 
-async def reacoes(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    r = update.message_reaction
-    if not r: return
-    emojis = [x.emoji for x in r.new_reaction]
-    if "✅" in emojis:
-        await context.bot.send_message(chat_id=r.chat_id, text="Salvo! ✅")
-    if "❌" in emojis:
-        await context.bot.send_message(chat_id=r.chat_id, text="Removido! ❌")
+def run_flask():
+    app.run(host='0.0.0.0', port=10000)
 
-async def marcar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("SÓ SALVINHO 😎")
+threading.Thread(target=run_flask).start()
 
-def run_bot():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(MessageReactionHandler(reacoes))
-    app.add_handler(MessageHandler(filters.Mention("@MeuLife_Bot"), marcar))
-    app.add_handler(MessageHandler(filters.REPLY, marcar))
-    print("BOT ON")
-    app.run_polling()
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-if __name__ == "__main__":
-    Thread(target=run_bot).start()
-    port = int(os.environ.get("PORT", 10000))
-    web_app.run(host='0.0.0.0', port=port)
+@bot.event
+async def on_ready():
+    print(f"Logado como {bot.user}")
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send("Life-bot online! 🏆🔥")
+
+bot.run(os.getenv("DISCORD_TOKEN"))
