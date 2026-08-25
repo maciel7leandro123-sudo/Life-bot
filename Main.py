@@ -11,7 +11,8 @@ def home():
     return "Bot online!"
 
 def run_flask():
-    app.run(host='0.0.0.0', port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 
 threading.Thread(target=run_flask).start()
 
@@ -25,6 +26,6 @@ async def on_ready():
 
 @bot.command()
 async def ping(ctx):
-    await ctx.send("Life-bot online! 🏆🔥")
+    await ctx.send("Life-bot online! 🏆")
 
 bot.run(os.getenv("DISCORD_TOKEN"))
