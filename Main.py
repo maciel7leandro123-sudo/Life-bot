@@ -1,103 +1,90 @@
-from flask import Flask
-from threading import Thread
-import os
-
-app = Flask('')
-@app.route('/')
-def home():
-    return "Life-bot online!"
-
-def run():
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
-
-Thread(target=run, daemon=True).start()
 import discord
 from discord.ext import commands
 import datetime
+import os
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-intents.reactions = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
+DONO_ID = 1297981646842237049
+
 @bot.event
 async def on_ready():
-    print(f"Life-bot online! {bot.user}")
+    print(f"✅ LIFE FINAL ONLINE: {bot.user}")
+    await bot.change_presence(activity=discord.Game(name="GOLD LIFE 24H ON 💛"))
 
 @bot.event
 async def on_message(message):
+    if message.author.bot:
+        return
     if bot.user.mentioned_in(message) and not message.mention_everyone:
         if len(message.mentions) == 1:
-            await message.channel.send("SÓ SALVINHO")
+            await message.channel.send("SÓ SALVINHO 💛 24H ON")
     await bot.process_commands(message)
 
-@bot.event
-async def on_raw_reaction_add(payload):
-    if payload.user_id == bot.user.id:
-        return
-    
-    channel = bot.get_channel(payload.channel_id)
+def eh_dono():
+    async def predicate(ctx):
+        return ctx.author.id == DONO_ID or ctx.guild.owner_id == ctx.author.id or ctx.author.guild_permissions.administrator
+    return commands.check(predicate)
+
+@bot.command()
+@eh_dono()
+async def ban(ctx, membro: discord.Member, *, motivo="Sem motivo"):
+    await membro.ban(reason=motivo)
+    await ctx.send(f"🔨 {membro.mention} foi BANIDO! Motivo: {motivo}")
+
+@bot.command()
+@eh_dono()
+async def kick(ctx, membro: discord.Member, *, motivo="Sem motivo"):
+    await membro.kick(reason=motivo)
+    await ctx.send(f"👢 {membro.mention} foi EXPULSO! Motivo: {motivo}")
+
+@bot.command()
+@eh_dono()
+async def castigo(ctx, membro: discord.Member, tempo: str, *, motivo="Sem motivo"):
     try:
-        msg = await channel.fetch_message(payload.message_id)
-        autor_da_mensagem = msg.author  # PESSOA QUE RECEBEU A REAÇÃO
+        unidade = tempo[-1].lower()
+        valor = int(tempo[:-1])
+        if unidade == "m": delta = datetime.timedelta(minutes=valor)
+        elif unidade == "h": delta = datetime.timedelta(hours=valor)
+        elif unidade == "d": delta = datetime.timedelta(days=valor)
+        else: 
+            await ctx.send("Use: !castigo @pessoa 10m / 1h / 1d")
+            return
+        await membro.timeout(delta, reason=motivo)
+        await ctx.send(f"⏰ {membro.mention} de castigo por {tempo}! Motivo: {motivo}")
+    except Exception as e:
+        await ctx.send(f"Erro: {e}")
 
-        if str(payload.emoji) == "✅":
-            await channel.send(f"{autor_da_mensagem.mention} parabéns sua tag tá liberada🎉")
-        elif str(payload.emoji) == "❌":
-            await channel.send(f"{autor_da_mensagem.mention} ops entre na comunidade pra receber a tag!")
+@bot.command()
+@eh_dono()
+async def limpar(ctx, qtd: int = 10):
+    await ctx.channel.purge(limit=qtd+1)
+    await ctx.send(f"🧹 Limpei {qtd} mensagens!", delete_after=3)
 
-    except:
-        pass
+@bot.command()
+@eh_dono()
+async def travar(ctx):
+    await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
+    await ctx.send("🔒 Chat travado!")
+
+@bot.command()
+@eh_dono()
+async def destravar(ctx):
+    await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
+    await ctx.send("🔓 Chat destravado!")
+
+@bot.command()
+@eh_dono()
+async def anuncio(ctx, *, texto):
+    embed = discord.Embed(title="📢 GOLD LIFE", description=texto, color=0xFFD700)
+    await ctx.send("@everyone", embed=embed)
 
 @bot.command()
 async def ping(ctx):
-    await ctx.send("Life-bot online! 🏆")
+    await ctx.send("💛 LIFE 24H ON! Dono: <@1297981646842237049>")
 
-@bot.command()
-@commands.has_permissions(manage_messages=True)
-async def clear(ctx, qtd: int = 5):
-    await ctx.channel.purge(limit=qtd+1)
-    await ctx.send(f"Apaguei {qtd} mensagens!", delete_after=3)
-
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def castigo(ctx, membro: discord.Member, tempo: str, *, motivo="Sem motivo"):
-    # tempo tipo: 10m, 1h, 1d
-    try:
-        unidade = tempo[-1]
-        valor = int(tempo[:-1])
-        
-        if unidade == "m":
-            delta = datetime.timedelta(minutes=valor)
-        elif unidade == "h":
-            delta = datetime.timedelta(hours=valor)
-        elif unidade == "d":
-            delta = datetime.timedelta(days=valor)
-        else:
-            await ctx.send("Use m para minutos, h para horas, d para dias. Ex: !castigo @fulano 10m spam")
-            return
-
-        await membro.timeout(delta, reason=motivo)
-        await ctx.send(f"🔨 {membro.mention} levou castigo de {tempo}! Motivo: {motivo}")
-
-    except Exception as e:
-        await ctx.send(f"Erro: {e}. Use assim: !castigo @pessoa 10m motivo")
-
-@bot.command()
-@commands.has_permissions(kick_members=True)
-async def kick(ctx, membro: discord.Member, *, motivo="Sem motivo"):
-    await membro.kick(reason=motivo)
-    await ctx.send(f"{membro.mention} foi expulso!")
-
-@bot.command()
-@commands.has_permissions(ban_members=True)
-async def ban(ctx, membro: discord.Member, *, motivo="Sem motivo"):
-    await membro.ban(reason=motivo)
-    await ctx.send(f"{membro.mention} foi banido!")
-
-import os
-TOKEN = os.getenv("DISCORD_TOKEN")
-bot.run(TOKEN)
-
+bot.run(os.getenv("DISCORD_TOKEN"))
